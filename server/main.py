@@ -5,7 +5,7 @@
 Mock ESP32 server for local development.
 
 Serves the web app from webapp/index.html and simulates the door
-open/close/status endpoints, printing relay actions to the console.
+open endpoint, printing the relay pulse to the console.
 
 Usage:
     uv run server/main.py
@@ -14,11 +14,10 @@ Usage:
 
 import argparse
 import pathlib
-import sys
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 # ---------------------------------------------------------------------------
@@ -32,8 +31,6 @@ WEBAPP_HTML = pathlib.Path("webapp/index.html")
 # App
 # ---------------------------------------------------------------------------
 app = FastAPI(docs_url=None, redoc_url=None)
-
-door_open = False
 
 
 def _check_password(body: dict[str, Any]) -> bool:
@@ -49,29 +46,11 @@ async def serve_webapp() -> HTMLResponse:
 
 @app.post("/api/open")
 async def api_open(request: Request) -> JSONResponse:
-    global door_open
     body = await request.json()
     if not _check_password(body):
         return JSONResponse({"ok": False, "error": "Wrong password"}, status_code=401)
-    door_open = True
-    print("[RELAY] >>> PULSE HIGH — door opened")
+    print("[RELAY] >>> PULSE HIGH → LOW — door unlocked")
     return JSONResponse({"ok": True})
-
-
-@app.post("/api/close")
-async def api_close(request: Request) -> JSONResponse:
-    global door_open
-    body = await request.json()
-    if not _check_password(body):
-        return JSONResponse({"ok": False, "error": "Wrong password"}, status_code=401)
-    door_open = False
-    print("[RELAY] >>> LOW — door closed")
-    return JSONResponse({"ok": True})
-
-
-@app.get("/api/status")
-async def api_status() -> JSONResponse:
-    return JSONResponse({"door": "open" if door_open else "closed"})
 
 
 # ---------------------------------------------------------------------------

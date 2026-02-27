@@ -7,8 +7,6 @@
 
 WebServer server(80);
 
-// Track relay state for /api/status
-bool doorOpen = false;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,25 +35,8 @@ void handleOpen() {
   digitalWrite(RELAY_PIN, HIGH);
   delay(RELAY_PULSE_MS);
   digitalWrite(RELAY_PIN, LOW);
-  doorOpen = true;
   sendJson(200, "{\"ok\":true}");
-  Serial.println("Door opened.");
-}
-
-void handleClose() {
-  if (!checkPassword(server.arg("plain"))) {
-    sendJson(401, "{\"ok\":false,\"error\":\"Wrong password\"}");
-    return;
-  }
-  digitalWrite(RELAY_PIN, LOW);
-  doorOpen = false;
-  sendJson(200, "{\"ok\":true}");
-  Serial.println("Door closed.");
-}
-
-void handleStatus() {
-  String payload = String("{\"door\":\"") + (doorOpen ? "open" : "closed") + "\"}";
-  sendJson(200, payload);
+  Serial.println("Door unlocked (relay pulsed).");
 }
 
 void handleNotFound() {
@@ -80,10 +61,8 @@ void setup() {
   Serial.printf("\nConnected. IP: %s\n", WiFi.localIP().toString().c_str());
 
   // Register routes
-  server.on("/",           HTTP_GET,  handleRoot);
-  server.on("/api/open",   HTTP_POST, handleOpen);
-  server.on("/api/close",  HTTP_POST, handleClose);
-  server.on("/api/status", HTTP_GET,  handleStatus);
+  server.on("/",          HTTP_GET,  handleRoot);
+  server.on("/api/open",  HTTP_POST, handleOpen);
   server.onNotFound(handleNotFound);
 
   server.begin();
